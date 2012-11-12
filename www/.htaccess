@@ -1,0 +1,231 @@
+#Options +FollowSymLinks -Multiviews
+
+DirectoryIndex engine.php
+
+#RewriteEngine On
+#RewriteCond %{REQUEST_FILENAME} !-f
+#RewriteRule . index.php [L]
+
+
+#--------------------------------------------------------------------------#
+#                           GENERAL NOTES                                  #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+# We use [S=X] to skip the next X RewriteRules when a condition is met  so #
+# if you add or edit anything, take this into account.                     #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+# All environmentall variables we might want to use in the engine have the #
+# prefix REWRITE_, so we can easily scoop them out of $_SERVER in PHP      #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+# If you think this is groovy, check this out:                             #
+#                         http://www.webmasterworld.com/apache/3208525.htm #
+#--------------------------------------------------------------------------#
+
+#--------------------------------------------------------------------------#
+#                         Flag certain IPs as Trusted                      #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+#   Always flag local IPs as trusted                                       #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+    SetEnvIf Remote_Addr ^192\.168\.1\.     REWRITE_TRUSTED_IP=true
+    SetEnvIf Remote_Addr ^127\.0\.0\.[1-7]$ REWRITE_TRUSTED_IP=true
+#--------------------------------------------------------------------------#
+
+
+RewriteEngine On
+#--------------------------------------------------------------------------#
+#           Get the client-requested full URI and full query string        #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+    RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ (/[^?]*)(\?[^\ ]*)?\ HTTP/
+    RewriteRule .? - [E=REWRITE_URI:%1,E=REWRITE_QUERYSTRING:%2]
+#--------------------------------------------------------------------------#
+
+
+#--------------------------------------------------------------------------#
+# Redirected everything that is an existing file straight to the existing  #
+# file.                                                                    #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+    RewriteCond %{REQUEST_URI} !^/$
+#    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f [OR]
+    RewriteCond %{REQUEST_URI} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} .*(wmd|css|js)/.*$ [OR]
+    RewriteCond %{REQUEST_FILENAME} .*/favicon.ico$
+    RewriteRule .? - [QSA,L,E=REWRITE_SOURCE:REAL_FILE,E=_REDIRECT:yes]
+#--------------------------------------------------------------------------#
+
+
+#--------------------------------------------------------------------------#
+# Make sure pages that have already been rewritten are not rewritten again.#
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+    RewriteCond %{ENV:_REDIRECT} ^yes$ [OR]
+    RewriteCond %{ENV:REDIRECT_STATUS} 200
+    RewriteRule .? - [L]
+#--------------------------------------------------------------------------#
+
+
+#--------------------------------------------------------------------------#
+# @TODO: Fix this so we don't need symlinks to the frontend dir.
+#                      redirect calls to resources                         #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+#    RewriteCond %{REQUEST_FILENAME} ^.*/(wmd|css|js)/.*$
+#    RewriteRule .? - [E=REWRITE_SOURCE:RESOURCE,E=_REDIRECT:yes,S=3]
+#--------------------------------------------------------------------------#
+
+
+#--------------------------------------------------------------------------#
+#                      redirect calls to the homepage                      #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+   RewriteCond %{REQUEST_URI} ^(/)$
+   RewriteRule .? - [E=REWRITE_SOURCE:FRONT_PAGE,E=_REDIRECT:yes,S=2]
+#--------------------------------------------------------------------------#
+
+
+#--------------------------------------------------------------------------#
+#     Images that are to be resized are also redirected to the engine,     #
+#     which calls a resize script                                          #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+    RewriteCond %{REQUEST_FILENAME} ^/resize/.*(jpg|gif|png)
+    RewriteRule .? - [E=REWRITE_SOURCE:IMAGE_RESIZE,E=_REDIRECT:yes,S=1]
+#--------------------------------------------------------------------------#
+
+
+#--------------------------------------------------------------------------#
+#                   Set the source if not already set                      #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+    RewriteCond %{ENV:REWRITE_SOURCE} ^$
+    RewriteRule .? - [E=REWRITE_SOURCE:EVERYTHING_ELSE,E=_REDIRECT:yes]
+#--------------------------------------------------------------------------#
+
+
+#--------------------------------------------------------------------------#
+#                    Redirected everything to the engine                   #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+# this includes any URL pointing to a non-existing file.  This is based on #
+# the assumption that the engine checks file extensions and reports an     #
+# usefull 404!                                                             #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+    RewriteRule ^(.*)$ engine.php [L,QSA]
+#--------------------------------------------------------------------------#
+
+#EOF
+
+
+#################################################
+# Remember that when using virtualDocRoot the redirect file must be prefixed with
+# a slash '/' When a docroot _has_ been defined this is not neccesary.
+#################################################
+
+
+#################################################
+#               WORTH READING
+#-----------------------------------------------#
+# http://httpd.apache.org/docs/1.3/mod/mod_rewrite.html
+# http://www.yourhtmlsource.com/sitemanagement/urlrewriting.html
+# http://perishablepress.com/press/2006/01/10/stupid-htaccess-tricks/
+#-----------------------------------------------#
+#   [C]    Chain: instructs server to chain the current rule with the previous rule.
+#   [E=variable:value]    Environmental Variable: instructs the server to set the environmental variable "variable" to "value".
+#   [F]    Forbidden: instructs the server to return a 403 Forbidden to the client.
+#   [G]    Gone: instructs the server to deliver Gone (no longer exists) status message.
+#   [L]    Last rule: instructs the server to stop rewriting after the preceding directive is processed.
+#   [N]    Next: instructs Apache to rerun the rewrite rule until all rewriting directives have been achieved.
+#   [NE]   No Escape: instructs the server to parse output without escaping characters.
+#   [NC]   No Case: defines any associated argument as case-insensitive. i.e., "NC" = "No Case".
+#   [NS]   No Subrequest: instructs the server to skip the directive if internal sub-request.
+#   [OR]   Or: specifies a logical "or" that ties two expressions together such that either one proving true will cause the associated rule to be applied.
+#   [P]    Proxy: instructs server to handle requests by mod_proxy
+#   [PT]   Pass Through: instructs mod_rewrite to pass the rewritten URL back to Apache for further processing.
+#   [R]    Redirect: instructs Apache to issue a redirect, causing the browser to request the rewritten/modified URL.
+#   [QSA]  Append Query String: directs server to add the query string to the end of the expression (URL).
+#   [S=x]  Skip: instructs the server to skip the next "x" number of rules if a match is detected.
+#   [T=MIME-type]    Mime Type: declares the mime type of the target resource.
+#
+#   []    specifies a character class, in which any character within the brackets will be a match. e.g., [xyz] will match either an x, y, or z.
+#   []+    character class in which any combination of items within the brackets will be a match. e.g., [xyz]+ will match any number of x?s, y?s, z?s, or any combination of these characters.
+#   [^]    specifies not within a character class. e.g., [^xyz] will match any character that is neither x, y, nor z.
+#   [a-z]    a dash (-) between two characters within a character class ([]) denotes the range of characters between them. e.g., [a-zA-Z] matches all lowercase and uppercase letters from a to z.
+#   a{n}    specifies an exact number, n, of the preceding character. e.g., x{3} matches exactly three x?s.
+#   a{n,}    specifies n or more of the preceding character. e.g., x{3,} matches three or more x?s.
+#   a{n,m}    specifies a range of numbers, between n and m, of the preceding character. e.g., x{3,7} matches three, four, five, six, or seven x?s.
+#   ()    used to group characters together, thereby considering them as a single unit. e.g., (perishable)?press will match press, with or without the perishable prefix.
+#   ^    denotes the beginning of a regex (regex = regular expression) test string. i.e., begin argument with the proceeding character.
+#   $    denotes the end of a regex (regex = regular expression) test string. i.e., end argument with the previous character.
+#   ?    declares as optional the preceding character. e.g., monzas? will match monza or monzas, while mon(za)? will match either mon or monza. i.e., x? matches zero or one of x.
+#   !    declares negation. e.g., '!string' matches everything except 'string'.
+#   .    a dot (or period) indicates any single arbitrary character.
+#   -    instructs 'not to' rewrite the URL, as in '...domain.com.* - [F]'.
+#   +    matches one or more of the preceding character. e.g., G+ matches one or more G?s, while "+" will match one or more characters of any kind.
+#   *    matches zero or more of the preceding character. e.g., use '.*' as a wildcard.
+#   |    declares a logical 'or' operator. for example, (x|y) matches x or y.
+#   \    escapes special characters ( ^ $ ! . * | ). e.g., use '\.' to indicate/escape a literal dot.
+#   \.    indicates a literal dot (escaped).
+#   /*    zero or more slashes.
+#   .*    zero or more arbitrary characters.
+#   ^$    defines an empty string.
+#   ^.*$    the standard pattern for matching everything.
+#   [^/.]    defines one character that is neither a slash nor a dot.
+#   [^/.]+    defines any number of characters which contains neither slash nor dot.
+#   http://    this is a literal statement - in this case, the literal character string, 'http://'.
+#   ^domain.*    defines a string that begins with the term 'domain', which then may be proceeded by any number of any characters.
+#   ^domain\.com$    defines the exact string 'domain.com'.
+#   -d    tests if string is an existing directory
+#   -f    tests if string is an existing file
+#   -s    tests if file in test string has a non-zero value
+#################################################
+
+#################################################
+#                Server-Variables               #
+#-----------------------------------------------#
+# These are variables of the form
+#    %{ NAME_OF_VARIABLE }
+#-----------------------------------------------#
+#    HTTP headers:
+# - - - - - - - - - - - - - - - - - - - - - - - #
+#        HTTP_USER_AGENT
+#        HTTP_REFERER
+#        HTTP_COOKIE
+#        HTTP_FORWARDED
+#        HTTP_HOST
+#        HTTP_PROXY_CONNECTION
+#        HTTP_ACCEPT
+#-----------------------------------------------#
+#    connection & request:
+# - - - - - - - - - - - - - - - - - - - - - - - #
+#        REMOTE_ADDR
+#        REMOTE_HOST
+#        REMOTE_USER
+#        REMOTE_IDENT
+#        REQUEST_METHOD
+#        SCRIPT_FILENAME
+#        PATH_INFO
+#        QUERY_STRING
+#        AUTH_TYPE
+#-----------------------------------------------#
+#    server internals:
+# - - - - - - - - - - - - - - - - - - - - - - - #
+#        DOCUMENT_ROOT
+#        SERVER_ADMIN
+#        SERVER_NAME
+#        SERVER_ADDR
+#        SERVER_PORT
+#        SERVER_PROTOCOL
+#        SERVER_SOFTWARE
+#-----------------------------------------------#
+#    system stuff:
+# - - - - - - - - - - - - - - - - - - - - - - - #
+#        TIME_YEAR
+#        TIME_MON
+#        TIME_DAY
+#        TIME_HOUR
+#        TIME_MIN
+#        TIME_SEC
+#        TIME_WDAY
+#        TIME
+#-----------------------------------------------#
+#    specials:
+# - - - - - - - - - - - - - - - - - - - - - - - #
+#        API_VERSION
+#        THE_REQUEST
+#        REQUEST_URI
+#        REQUEST_FILENAME
+#        IS_SUBREQ
+#################################################
+#EOF
