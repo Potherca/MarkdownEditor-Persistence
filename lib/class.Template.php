@@ -155,8 +155,20 @@ namespace Potherca
             $this->fixResourceLink('a', 'href', array('PREPEND' => 'view/'));
             // Wrap #editor in a <form> tag
             $this->fixToolBar();
+            $this->addCssFixes();
         }
 
+        protected function addCssFixes()
+        {
+            $oHeadNode = $this->getElementsByTagName('head')->item(0);
+            $oFragment = $this->createDocumentFragment();
+            $oFragment->appendXML('
+                <style>
+                    #preview {margin-bottom: 4em;}
+                </style>
+            ');
+            $oHeadNode->appendChild($oFragment);
+        }
         protected function fixResourceLink($p_sTagName, $p_sAttributeName, Array $p_aMutations=array())
         {
             $oNodeList = $this->getElementsByTagName($p_sTagName);
