@@ -1,4 +1,4 @@
-#Server-side persistence for the Mardown editor
+#Server-side persistence for the Markdown editor
 
 ## General introduction
 
