@@ -116,6 +116,11 @@ namespace Potherca
                     }
                 break;
 
+                case 'logout':
+                    $sMarkdown = $oRepository->view($sRequest);
+                    unset($_SESSION['username']);
+                break;
+
                 case 'login':
                     $sMarkdown = $oRepository->view($sRequest);
 

@@ -59,15 +59,25 @@ namespace Potherca
             $oEditorElement = $this->getElementById('editor');
             $this->removeChildrenFromNode($oEditorElement);
         }
+
         public function addLoginButton($p_sRequest)
         {
             $oEditorElement = $this->getElementById('editor');
-            $oButton = $this->createElement('a');
-            $oButton->setAttribute('href', $this->getWebRoot() . 'login/' . $p_sRequest);
-            $oButton->setAttribute('class', 'toolbutton');
-            $oButton->setAttribute('id', 'save');
-            $oButton->appendChild($this->createTextNode('Please Login to Edit'));
-            $oEditorElement->appendChild($oButton);
+            $oLink = $this->createElement('a');
+            $oLink->setAttribute('href', $this->getWebRoot() . 'login/' . $p_sRequest);
+            $oLink->appendChild($this->createTextNode('Please Login to Edit'));
+            $oEditorElement->appendChild($oLink);
+        }
+
+        public function addLogoutButton($p_sRequest)
+        {
+            $oFooter = $this->getElementById('footer');
+            $oLink = $this->createElement('a');
+            $oLink->setAttribute('href', $this->getWebRoot() . 'logout/' . $p_sRequest);
+            $oLink->setAttribute('class', 'toolbutton logout-button');
+            $oLink->appendChild($this->createTextNode('logout'));
+            $oFooter->appendChild($oLink);
+
         }
 
         public function fixEditorForm($p_sRequest, $p_sMarkdown)
@@ -145,8 +155,20 @@ namespace Potherca
             $this->fixResourceLink('a', 'href', array('PREPEND' => 'view/'));
             // Wrap #editor in a <form> tag
             $this->fixToolBar();
+            $this->addCssFixes();
         }
 
+        protected function addCssFixes()
+        {
+            $oHeadNode = $this->getElementsByTagName('head')->item(0);
+            $oFragment = $this->createDocumentFragment();
+            $oFragment->appendXML('
+                <style>
+                    #preview {margin-bottom: 4em;}
+                </style>
+            ');
+            $oHeadNode->appendChild($oFragment);
+        }
         protected function fixResourceLink($p_sTagName, $p_sAttributeName, Array $p_aMutations=array())
         {
             $oNodeList = $this->getElementsByTagName($p_sTagName);
