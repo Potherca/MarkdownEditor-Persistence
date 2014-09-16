@@ -1,6 +1,6 @@
 #Options +FollowSymLinks -Multiviews
 
-DirectoryIndex engine.php
+DirectoryIndex index.php
 
 #RewriteEngine On
 #RewriteCond %{REQUEST_FILENAME} !-f
@@ -102,7 +102,7 @@ RewriteEngine On
 # the assumption that the engine checks file extensions and reports an     #
 # usefull 404!                                                             #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-    RewriteRule ^(.*)$ engine.php [L,QSA]
+    RewriteRule ^(.*)$ index.php [L,QSA]
 #--------------------------------------------------------------------------#
 
 #EOF
